@@ -1,6 +1,6 @@
 # Custom Jupyter Notebook for Data Engineering
 
-A production-ready Docker setup for Jupyter Lab with Data Engineering tools, demonstrating Docker layer caching best practices.
+A Docker setup for Jupyter Lab with Data Engineering tools, demonstrating Docker layer caching best practices.
 
 ## Quick Start
 
