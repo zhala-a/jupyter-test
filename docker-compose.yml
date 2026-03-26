@@ -1,0 +1,106 @@
+name: jupyter-de
+
+services:
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Build arguments - can be overridden at build time
+      args:
+        JUPYTER_PORT: 8888
+        NB_USER: jupyter
+        NB_UID: 1000
+    image: jupyter-de:latest
+    container_name: jupyter-de
+
+    # Port mapping
+    ports:
+      - "8888:8888"
+
+    # Volume mounts for persistent data and development
+    volumes:
+      # Mount local notebooks directory for persistence
+      - ./notebooks:/home/jupyter/notebooks
+      # Mount for Jupyter configuration persistence
+      - jupyter-config:/home/jupyter/.jupyter
+      # Optional: Mount local data directory
+      # - ./data:/home/jupyter/data
+
+    # Environment variables
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      # Timezone
+      - TZ=UTC
+      # Python settings
+      - PYTHONUNBUFFERED=1
+
+    # Load additional environment from file
+    env_file:
+      - .env.example
+
+    # Resource limits (important for production)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network configuration
+    networks:
+      - jupyter-network
+
+  # Optional: PostgreSQL database for data engineering work
+  postgres:
+    image: postgres:15-alpine
+    container_name: jupyter-postgres
+    profiles:
+      - with-db
+    environment:
+      POSTGRES_USER: jupyter
+      POSTGRES_PASSWORD: jupyter_password
+      POSTGRES_DB: dataeng
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jupyter -d dataeng"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jupyter-network
+
+# Named volumes for data persistence
+volumes:
+  jupyter-config:
+    name: jupyter-de-config
+  postgres-data:
+    name: jupyter-postgres-data
+
+# Networks
+networks:
+  jupyter-network:
+    name: jupyter-network
+    driver: bridge
